@@ -1,0 +1,235 @@
+package 接口;
+
+import java.text.Collator;
+import java.util.*;
+import java.io.*;
+
+public class text {
+	public static void main(String[] args) throws IOException {
+		String in = new String("C:\\Users\\25719\\Desktop\\yq_in.txt");//默认输入路径
+		String out = new String("C:\\Users\\25719\\Desktop\\out.txt");//默认输出路径
+
+		String[] str = new String[135];//存放读入数据
+		int num = 0;//统计数据总数
+
+		Scanner sr = new Scanner(System.in);
+		String get = sr.nextLine();//控制台录入
+		
+		String[] deal = get.split(" ");
+		
+		Sheng[] T = new Sheng[20];//省类
+		Sheng t = new Sheng("",0);//用于排序临时存放数据
+		Tool tools = new Tool();//工具类，接入三个接口
+
+		if (get.equals("")) {
+			BufferedReader br = open_in(in);
+			PrintStream ps = open_out(out);
+			num = read(br,str);
+			tools.deal(br, ps,str,num);
+		} else {
+			if (deal.length == 2) {
+				BufferedReader br = open_in("C:\\Users\\25719\\Desktop\\"+deal[0]);
+				PrintStream ps = open_out("C:\\Users\\25719\\Desktop\\"+deal[1]);
+				num = read(br,str);
+				tools.deal(br, ps, T, str, num,t);
+			}else if (deal.length == 3){
+				BufferedReader br = open_in("C:\\Users\\25719\\Desktop\\"+deal[0]);
+				PrintStream ps = open_out("C:\\Users\\25719\\Desktop\\"+deal[1]);
+				num = read(br,str);
+				tools.deal( br, ps,deal[2],T,t,str,num);
+			}
+		}
+
+		sr.close();
+	}
+	static BufferedReader open_in(String in) throws FileNotFoundException {
+		File file = new File(in);// 链接文件
+		BufferedReader br = new BufferedReader(new FileReader(file));// 用于读取文本
+		return br;
+	}
+	static int read(BufferedReader br ,String[] str) throws IOException {
+		int num = 0;
+		while ((str[num] = br.readLine()) != null) {// 从文本中按行读取文本，并用于循环的控制
+			num++;
+		}
+		return num;
+	}
+	static PrintStream open_out(String out) throws FileNotFoundException {
+		FileOutputStream fos = new FileOutputStream(new File(out));// 在桌面创建一个名为out.txt的文本文件，用于存放处理后的数据
+		PrintStream ps = new PrintStream(fos);// 用于写入文本
+		return ps;
+	}
+}
+
+interface one {
+	public abstract void deal(BufferedReader br, PrintStream ps,String[] str,int num);//默认无参
+}
+
+interface two {
+	public abstract void deal(BufferedReader br, PrintStream ps, Sheng[] T,String[] str,int num, Sheng t);//指定路径
+}
+
+interface three {
+	public abstract void deal(BufferedReader br, PrintStream ps, String province,  Sheng[] T,Sheng t,String[] str,int num);//筛选指定省份
+}
+
+class Tool implements one ,two,three{
+	@Override
+	public void deal(BufferedReader br, PrintStream ps,String[] str,int num) {	
+		String[] deal = new String[num];//给字符串用于存放处理过程中产生的字符串
+		String area_temp = str[0].substring(0, str[0].indexOf("\t"));//截取第一组数据的省份信息
+		
+		ps.println(area_temp);//存入文本
+		System.out.println(area_temp);
+		for (int n = 0; n < num; n++) {
+			deal[n] = str[n].substring(str[n].indexOf("\t") + 1);//截取数据除省份信息以外的其它信息
+			if (area_temp.equals((str[n].substring(0, str[n].indexOf("\t"))))) {//判断前后两组数据身省份新信息是否一致
+				if (!(deal[n].substring(deal[n].indexOf("\t") + 1)).equals("0")) {//截取  地区后的数字，并用于判断是否为待明确地区
+					ps.println(deal[n]);//存入文本
+					System.out.println(deal[n]);
+				}
+			} else {
+				System.out.println();
+				area_temp = str[n].substring(0, str[n].indexOf("\t"));//省份信息不同，覆盖掉之前的信息
+				ps.println();//文本换行
+				ps.println(area_temp);
+				System.out.println(area_temp);
+				System.out.println(deal[n]);
+				ps.println(deal[n]);
+			}
+		}
+	}
+
+	@Override
+	public void deal(BufferedReader br, PrintStream ps, Sheng[] T, String[] str, int num, Sheng t) {
+		// TODO 自动生成的方法存根
+		int num_T = split_province(str, T, num);
+		split_city(T, str, num);
+		sort(T, num_T, t);//排序函数（冒泡排序）
+		for (int n = 0; n <= num_T; n++) {
+			if (n!=0) {
+				System.out.println();
+				ps.println();//文本换行
+			}	
+			T[n].show(ps);
+		}
+	}
+	
+	int split_province(String[] str,Sheng[] T,int num) {
+		String city;
+		String temp = str[0].substring(0, str[0].indexOf("\t"));
+		int num_T = 0,num_all = 0;//统计
+		for (int n = 0; n < num; n++) {//统计省名以及各省总数
+			if (temp.equals((str[n].substring(0, str[n].indexOf("\t"))))) {
+				city = (str[n].substring(str[n].indexOf("\t") + 1));
+				num_all += Integer.parseInt(city.substring(city.indexOf("\t") + 1));// 累加总数
+			} else {
+				T[num_T] = new Sheng(temp,num_all);//建类
+				num_all = 0;//总数清零
+				num_T++;//下标位移
+				temp = str[n].substring(0, str[n].indexOf("\t"));//重新截取省名
+				city = str[n].substring(str[n].indexOf("\t") + 1);
+				num_all += Integer.parseInt(city.substring(city.indexOf("\t") + 1));// 累加总数
+			}
+		}
+		T[num_T] = new Sheng(temp,num_all);//存放最后一个省
+		return num_T;
+	}
+	
+	void split_city(Sheng[] T,String[] str,int num) {
+		int num_T = 0;
+		for(int n = 0;n < num;n++) {//将市分别存入对应省
+			if (str[n].substring(0, str[n].indexOf("\t")).equals(T[num_T].temp)) {
+				T[num_T].set_area(str[n].substring(str[n].indexOf("\t") + 1));
+			}else {
+				num_T++;
+				n--;
+			}
+		}
+	}
+	
+	static void sort(Sheng[] T, int num_T, Sheng t) {
+		for (int n = 0; n < num_T - 1; n++) {//省名排序（冒泡排序）
+			for (int i = 0; i < num_T - n - 1; i++) {
+				if (T[i].num < T[i + 1].num) {
+					t = T[i];
+					T[i] = T[i + 1];
+					T[i + 1] = t;
+				} else if (T[i].num == T[i + 1].num) {
+					int compare = compare(T[i].temp, T[i + 1].temp);//比较首字母
+					if (compare < 0) {
+						t = T[i];
+						T[i] = T[i + 1];
+						T[i + 1] = t;
+					}
+				}
+			}
+		}
+		for (int m = 0; m < num_T; m++) {//控制省循环
+			for (int n = 0; n < T[m].num_city - 1; n++) {//控制省内循环
+				for (int i = 0; i < T[m].num_city - n - 1; i++) {
+					int a = Integer.parseInt(T[m].area[i].substring(T[m].area[i].indexOf("\t") + 1));//获取各市数据
+					int b = Integer.parseInt(T[m].area[i + 1].substring(T[m].area[i + 1].indexOf("\t") + 1));
+					if (a < b) {
+						t.area[0] = T[m].area[i];
+						T[m].area[i] = T[m].area[i + 1];
+						T[m].area[i + 1] = t.area[0];
+					} else if (a == b) {
+						String s1 = T[m].area[i].substring(T[m].area[i].indexOf("\t") + 1);
+						String s2 = T[m].area[i + 1].substring(T[m].area[i + 1].indexOf("\t") + 1);
+						int compare = compare(s1, s2);//比较首字母
+						if (compare < 0) {
+							t.area[0] = T[m].area[i];
+							T[m].area[i] = T[m].area[i + 1];
+							T[m].area[i + 1] = t.area[0];
+						}
+					}
+				}
+			}
+		}
+	}
+
+	static int compare(String s1, String s2) {//比较首字母
+		Collator c = Collator.getInstance(Locale.CHINA);
+		int n = c.compare(s1, s2);
+		return n;
+	}
+
+	@Override
+	public void deal(BufferedReader br, PrintStream ps, String province, Sheng[] T,Sheng t, String[] str, int num) {
+		// TODO 自动生成的方法存根
+		int num_T = split_province(str, T, num);
+		split_city(T, str, num);
+		sort(T, num_T, t);//排序函数（冒泡排序）
+		for (int n = 0; n <= num_T; n++) {
+			if (T[n].temp.equals(province))
+				T[n].show(ps);
+		}
+	}
+}
+
+class Sheng {
+	String temp;
+	String[] area = new String[40];// 各市信息
+	int num = 0;// 各市总人数
+	int num_city = 0;// 市总数
+
+	Sheng(String temp, int num) {// 构造函数
+		this.temp = temp;
+		this.num = num;
+	}
+
+	void set_area(String a) {// 输入市的信息
+		this.area[num_city] = a;
+		num_city++;
+	}
+
+	void show(PrintStream ps) {// 输出
+		System.out.println(this.temp + "\t" + num);
+		ps.println(this.temp + "\t" + num);
+		for (int n = 0; n < num_city; n++) {
+			System.out.println(area[n]);
+			ps.println(area[n]);
+		}
+	}
+}
